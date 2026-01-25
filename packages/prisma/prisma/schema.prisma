@@ -6,65 +6,84 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+enum RoomStatus {
+  WAITING
+  PLAYING
+  FINISHED
+}
+
+enum ShapeType {
+  rect
+  circle
+  line
+  pencil
+}
 
 model User {
-  id       String  @id @default(cuid())
-  email    String  @unique
-  name     String
-  password String
-  photo    String?
+  id        String   @id @default(uuid())
+  username  String
+  avatarId  Int
+  score     Int      @default(0)
+  createdAt DateTime @default(now())
 
-  rooms Room[]
-  chats Chat[]
+  // 1. User belongs to a Room (Member)
+  roomId    String?
+  room      Room?    @relation("RoomMembers", fields: [roomId], references: [id])
+
+  // 2. User sends many Chats
+  chats     Chat[]
+
+  // 3. User might be an Admin of many rooms (Optional but good for history)
+  roomsManaged Room[] @relation("RoomAdmin")
 }
 
 model Room {
-  id        Int      @id @default(autoincrement())
+  id        String   @id @default(uuid())
   slug      String   @unique
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  status    RoomStatus @default(WAITING)
 
-  adminId String
-  admin   User   @relation(fields: [adminId], references: [id])
+  // --- Game State (Persisted) ---
+  currentWord     String?  // The word being guessed
+  currentDrawerId String?  // ID of the user drawing right now
 
-  chats  Chat[]
-  shapes Shape[] // <--- Added relation to Shape
+  // --- Relations ---
+  
+  // 1. The Admin (Strict Link)
+  // We use a named relation "RoomAdmin" to distinguish from normal members
+  adminId   String
+  admin     User     @relation("RoomAdmin", fields: [adminId], references: [id])
+
+  // 2. The Players
+  users     User[]   @relation("RoomMembers")
+
+  // 3. The Data
+  shapes    Shape[]
+  chats     Chat[]
 }
 
 model Chat {
-  id        Int      @id @default(autoincrement())
+  // CHANGED: Int -> String (UUID)
+  id        String   @id @default(uuid()) 
   message   String
-  userId    String
-  roomId    Int
   createdAt DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id])
-  room Room @relation(fields: [roomId], references: [id])
+  // Relation: Which Room?
+  roomId    String
+  room      Room     @relation(fields: [roomId], references: [id])
+
+  // Relation: Who spoke?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
 }
 
-// --- NEW MODEL ---
 model Shape {
-  id     Int    @id @default(autoincrement())
-  roomId Int
-  type   String // "rect" | "circle" | "line"
+  // CHANGED: Int -> String (UUID)
+  id        String   @id @default(uuid()) 
 
-  // Rect properties
-  x      Float?
-  y      Float?
-  width  Float?
-  height Float?
+  roomId    String
+  room      Room     @relation(fields: [roomId], references: [id])
 
-  // Circle properties 
-  // (Note: You could reuse x/y, but separate fields are clearer for your TS types)
-  centerX Float?
-  centerY Float?
-  radius  Float?
-
-  // Line properties
-  startX Float?
-  startY Float?
-  endX   Float?
-  endY   Float?
-
-  room Room @relation(fields: [roomId], references: [id])
+  type      ShapeType
+  data      Json
 }

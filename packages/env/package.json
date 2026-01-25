@@ -2,13 +2,9 @@
   "name": "@repo/env",
   "version": "1.0.0",
   "description": "",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "/index.js",
   "exports": {
-    "./common": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
-    }
+    "./common": "./dist/index.js"
   },
   "scripts": {
     "dev": "tsc -b && node dist/index.js"
@@ -23,6 +19,7 @@
   },
   "devDependencies": {
     "@types/dotenv": "^8.2.3",
-    "@repo/typescript-config": "workspace:*"
+    "@repo/typescript-config": "workspace:*",
+    "@types/node": "^22.15.3"
   }
 }

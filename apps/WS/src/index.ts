@@ -1,3 +1,8 @@
 import { WS_PORT } from "@repo/env/common"
 
-console.log(WS_PORT);
+import prisma from "@repo/prisma/prisma";
+
+
+
+console.log("WS_PORT: ", WS_PORT);
+console.log("Prisma imported successfully");

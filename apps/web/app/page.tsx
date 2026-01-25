@@ -18,13 +18,13 @@ const ThemeImage = (props: Props) => {
   );
 };
 
-import { DATABASE_URL } from "@repo/env/common"
+
 
 
 export default function Home() {
   return (
    <div>
-DATABASE_URL: {DATABASE_URL}
+     <h1>Home</h1>
    </div>
   );
 }
