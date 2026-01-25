@@ -1,5 +1,5 @@
 {
-  "name": "SCRIBBLE",
+  "name": "scribble-game",
   "private": true,
   "scripts": {
     "build": "turbo run build",

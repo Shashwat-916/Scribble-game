@@ -11,6 +11,9 @@
     "check-types": "next typegen && tsc --noEmit"
   },
   "dependencies": {
+     "@repo/env": "workspace:*",
+    "@repo/prisma": "workspace:*",
+    "@repo/typescript-config": "workspace:*",
     "@repo/ui": "workspace:*",
     "next": "16.1.0",
     "react": "^19.2.0",
