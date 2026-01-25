@@ -23,3 +23,10 @@ export const CreateRoomSchema = z.object({
     username: z.string().min(3).max(20),
     avatarId: z.number().min(1).max(8) // Because your schema uses Int
 });
+
+
+export const JoinRoomSchema = z.object({
+    username: z.string().min(3).max(20),
+    avatarId: z.number().min(1).max(8),
+    roomId: z.string() // This will accept the "slug" (e.g. cool-tiger-123)
+});

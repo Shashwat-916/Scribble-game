@@ -26,11 +26,18 @@ console.log(response.data);
   }
 }
 
-export async function getRoom(slug: string) {
+
+export async function joinRoom(username: string, avatarId: number, roomId: string) {
   try {
-    const response = await axios.get(`${API_URL}/room/${slug}`);
+    // Note: You need to implement this /join endpoint on your backend!
+    // It should create a User and link them to the roomId.
+    const response = await axios.post(`${API_URL}/join`, {
+      username,
+      avatarId,
+      roomId, // The slug or ID entered by user
+    });
     return response.data;
   } catch (error: any) {
-    throw new Error(error.response?.data?.message || "Room not found");
+    throw new Error(error.response?.data?.message || "Failed to join room");
   }
 }

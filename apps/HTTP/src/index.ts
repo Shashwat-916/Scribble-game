@@ -16,6 +16,7 @@ const roomController = new RoomController();
 
 
 app.post("/room", roomController.createRoom);
+app.post("/join", roomController.joinRoom);
 app.get("/room/:slug", roomController.getRoom);
 
 console.log(`HTTP_PORT from env: ${HTTP_PORT}`);

@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import jwt from "jsonwebtoken";
-import { JWT_SECRET, CreateRoomSchema } from "@repo/env/common";
+import { JWT_SECRET, CreateRoomSchema, JoinRoomSchema } from "@repo/env/common";
 import { RoomService } from "./RoomService.js";
 
 export class RoomController {
@@ -64,4 +64,47 @@ export class RoomController {
             res.status(500).json({ message: "Internal Server Error" });
         }
     }
+
+
+    joinRoom = async (req: Request, res: Response) => {
+        // 1. Validate Input
+        const parsed = JoinRoomSchema.safeParse(req.body);
+        if (!parsed.success) {
+            res.status(400).json({ message: "Invalid inputs" });
+            return;
+        }
+
+        try {
+            const { username, avatarId, roomId } = parsed.data; // roomId here is the slug
+            
+            // 2. Call Service
+            const { user, room } = await this.roomService.joinRoom(username, avatarId, roomId);
+
+            // 3. Generate Token
+            const token = jwt.sign({
+                userId: user.id,
+                roomId: room.id,
+                name: user.username
+            }, JWT_SECRET ?? "secret");
+
+            // 4. Send Response
+            res.json({
+                message: "Joined room successfully",
+                token: token,
+                slug: room.slug,
+                roomId: room.id
+            });
+
+        } catch (e: any) {
+            console.error(e);
+            if (e.message === "Room not found") {
+                res.status(404).json({ message: "Room not found" });
+            } else {
+                res.status(500).json({ message: "Could not join room" });
+            }
+        }
+    }
+
+
+    
 }
