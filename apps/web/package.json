@@ -11,13 +11,16 @@
     "check-types": "next typegen && tsc --noEmit"
   },
   "dependencies": {
-     "@repo/env": "workspace:*",
+    "@repo/env": "workspace:*",
     "@repo/prisma": "workspace:*",
     "@repo/typescript-config": "workspace:*",
     "@repo/ui": "workspace:*",
+    "axios": "^1.13.3",
+    "lucide-react": "^0.563.0",
     "next": "16.1.0",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "react-hot-toast": "^2.6.0"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",

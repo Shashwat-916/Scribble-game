@@ -15,11 +15,12 @@
   "type": "module",
   "dependencies": {
     "dotenv": "^17.2.3",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@types/dotenv": "^8.2.3",
     "@repo/typescript-config": "workspace:*",
+    "@types/dotenv": "^8.2.3",
     "@types/node": "^22.15.3"
   }
 }

@@ -4,5 +4,5 @@ import prisma from "@repo/prisma/prisma";
 
 
 
-console.log("WS_PORT: ", WS_PORT);
+console.log("WS_PORT from env: ", WS_PORT);
 console.log("Prisma imported successfully");
