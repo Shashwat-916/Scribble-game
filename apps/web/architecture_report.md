@@ -53,7 +53,7 @@ The data flows **Unidirectionally** (One way flow), ensuring predictability.
     -   `avatarId` = 1
 2.  It exposes these values + setter functions (`setName`, `setAvatarId`).
 
-### B. The Composer (`page.tsx`)
+### B. The Composer (`page.tsx`)                
 1.  Calls the hook: `const logic = useLobbyLogic();`
 2.  Extracts the values: `logic.name`, `logic.avatarId`.
 
