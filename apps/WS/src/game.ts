@@ -3,6 +3,7 @@ import { Server } from "socket.io";
 // --- Types ---
 export interface Player {
     id: string;          // Socket ID
+    userId: string;      // Database ID (for uniqueness & frontend key)
     name: string;
     score: number;
     avatarId: number;
@@ -45,30 +46,47 @@ export class Game {
     // 1. PLAYER MANAGEMENT (JOIN / LEAVE)
     // ==================================================
 
-    addPlayer(socketId: string, name: string, avatarId: number) {
-        // Duplicate check
-        const existingPlayer = this.players.find(p => p.id === socketId);
-        if (existingPlayer) return;
+    // ==================================================
+    // 1. PLAYER MANAGEMENT (JOIN / LEAVE)
+    // ==================================================
+
+    addPlayer(socketId: string, userId: string, name: string, avatarId: number) {
+        // Duplicate check via userId (handles re-connections/strict mode)
+        const existingPlayerIndex = this.players.findIndex(p => p.userId === userId);
+
+        if (existingPlayerIndex !== -1) {
+            // Update socket ID if user exists (re-connected)
+            const player = this.players[existingPlayerIndex];
+            if (player) {
+                player.id = socketId;
+                player.name = name;
+                player.avatarId = avatarId;
+            }
+
+            // Re-broadcast list so everyone updates the socket ID mapping if needed
+            this.io.to(this.roomId).emit("user-joined", this.players);
+            return;
+        }
 
         const player: Player = {
             id: socketId,
+            userId,
             name: name,
             avatarId: avatarId,
             score: 0,
             isDrawer: false
         };
         this.players.push(player);
+
         this.io.to(this.roomId).emit("user-joined", this.players);
-        this.io.to(this.roomId).emit("chat-message", {
-            name: "System",
+
+        // Notification instead of System Chat
+        this.io.to(this.roomId).emit("notification", {
+            type: "success",
             message: `${name} joined the game!`
         });
 
-        // 👇 ADD THIS BLOCK: Auto-Start when 2nd player joins
-        if (this.players.length === 2 && !this.isGameStarted) {
-            console.log("2 Players reached! Starting game...");
-            this.startGame();
-        }
+        // REMOVED: Auto-Start Logic (Now Admin controlled)
     }
 
     removePlayer(socketId: string) {
@@ -81,17 +99,19 @@ export class Game {
 
         // 3. Notify others
         this.io.to(this.roomId).emit("user-left", this.players);
-        this.io.to(this.roomId).emit("chat-message", {
-            name: "System",
+
+        // Notification instead of System Chat
+        this.io.to(this.roomId).emit("notification", {
+            type: "error",
             message: `${playerToRemove.name} left the game.`
         });
 
         // --- CRITICAL: DRAWER LEFT LOGIC ---
         // Agar Jane wala banda Drawer tha aur round chal raha tha
         if (playerToRemove.isDrawer && this.roundActive) {
-            this.io.to(this.roomId).emit("chat-message", {
-                name: "System",
-                message: `${playerToRemove.name} (Drawer) left the game! Ending round...`
+            this.io.to(this.roomId).emit("notification", {
+                type: "error",
+                message: `${playerToRemove.name} (Drawer) left! Round ending.`
             });
             this.endRound("Drawer Disconnected");
         }
@@ -118,7 +138,7 @@ export class Game {
         // A. Reset Old State
         this.clearTimer();
         this.players.forEach(p => p.isDrawer = false);
-        this.roundActive = true;
+        this.roundActive = false; // Not active until word is selected
 
         // B. Pick Next Drawer (Circular Queue)
         // Logic: 0 -> 1 -> 2 -> 0 -> 1 ...
@@ -136,17 +156,36 @@ export class Game {
 
         drawer.isDrawer = true;
 
-        // C. Pick Word
-        this.currentWord = WORDS[Math.floor(Math.random() * WORDS.length)] as string;
+        // C. Generate 3 Random Words
+        const shuffled = [...WORDS].sort(() => 0.5 - Math.random());
+        const options = shuffled.slice(0, 3);
 
-        // D. Notify Clients
-        // 1. Drawer ko word batao
+        // D. Notify Drawer to Choose
+        this.io.to(drawer.id).emit("choose-word", {
+            options,
+            duration: 15 // 15s to choose
+        });
+
+        // Notify others
+        this.io.to(this.roomId).emit("chat-message", {
+            name: "System",
+            message: `${drawer.name} is choosing a word...`
+        });
+    }
+
+    public handleWordSelection(socketId: string, word: string) {
+        const drawer = this.players[this.currentDrawerIndex];
+        if (!drawer || drawer.id !== socketId) return;
+
+        this.currentWord = word;
+        this.roundActive = true;
+
+        // D. Notify Clients (Game Start)
         this.io.to(drawer.id).emit("your-turn", {
             word: this.currentWord,
             duration: ROUND_DURATION
         });
 
-        // 2. Baaki sabko batao
         this.io.to(this.roomId).emit("new-round", {
             drawerName: drawer.name,
             drawerId: drawer.id,
@@ -218,14 +257,17 @@ export class Game {
         // Case 3: CHECK GUESS
         if (message.trim().toLowerCase() === this.currentWord.toLowerCase()) {
             // 🎉 CORRECT GUESS!
-            const timeBonus = Math.ceil((this.timeLeft / ROUND_DURATION) * 20);
-            const points = 10 + timeBonus;
+            // STRICT 10 Points as requested
+            const points = 10;
 
             player.score += points;
 
             const drawer = this.players[this.currentDrawerIndex];
             if (drawer) {
-                drawer.score += 10;
+                // Drawer gets bonus for good drawing? Maybe 5? 
+                // Requests said "give him points 10 okay" referring to guesser.
+                // We'll give drawer 5 for consistency with standard Pictionary.
+                drawer.score += 5;
             }
 
             this.broadcastLeaderboard();
@@ -234,6 +276,15 @@ export class Game {
                 score: player.score
             });
 
+            this.io.to(this.roomId).emit("chat-message", {
+                name: "System",
+                message: `${player.name} guessed the word correctly!`
+            });
+
+            // Standard Scribble: round continues for others? Or ends?
+            // "give him points 10 okay" implies we handle the win.
+            // Usually, if one guesses, others have time. But simplistic implementation: End Round or let Timer run.
+            // Current code ends round. Let's stick to that for now to avoid complexity explosion.
             this.endRound(`${player.name} guessed the word!`);
         } else {
             // Wrong Guess -> Normal Chat

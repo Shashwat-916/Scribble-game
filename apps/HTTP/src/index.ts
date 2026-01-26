@@ -163,7 +163,8 @@ app.get("/room/:slug", async (req, res) => {
                         username: true,
                         avatarId: true
                     }
-                }
+                },
+                shapes: true
             }
         });
 
@@ -179,6 +180,39 @@ app.get("/room/:slug", async (req, res) => {
         res.status(500).json({ message: "Internal Server Error" });
     }
 });
+
+
+
+app.get("/room/:slug", async (req, res) => {
+    const { slug } = req.params;
+
+    try {
+        const room = await prisma.room.findFirst({
+            where: {
+                slug
+            },
+            include: {
+                users: {
+                    select: {
+                        id: true,
+                        username: true,
+                        avatarId: true
+                    }
+                },
+                shapes: true
+            }
+        });
+
+        res.json({
+            room
+        });
+    } catch (e) {
+        res.status(500).json({
+            message: "Error fetching room"
+        });
+    }
+});
+
 
 app.listen(HTTP_PORT || 3001, () => {
     console.log(`Server running on port ${HTTP_PORT || 3001}`);

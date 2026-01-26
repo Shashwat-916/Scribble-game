@@ -2,8 +2,8 @@ import { Server } from "socket.io";
 import { createServer } from "http";
 import jwt from "jsonwebtoken";
 // Make sure these paths match your monorepo structure
-import { JWT_SECRET, WS_PORT } from "@repo/env/common"; 
-import prisma from "@repo/prisma/prisma";      
+import { JWT_SECRET, WS_PORT } from "@repo/env/common";
+import prisma from "@repo/prisma/prisma";
 import { RoomManager } from "./RoomManager.js";
 
 const httpServer = createServer();
@@ -30,7 +30,7 @@ function checkAuth(token: string): string | null {
 
 io.on("connection", async (socket) => {
   // --- 2. AUTHENTICATION & SETUP ---
-  
+
   // Frontend sends: io(URL, { auth: { token }, query: { roomId } })
   const token = socket.handshake.auth.token as string;
   const roomId = socket.handshake.query.roomId as string;
@@ -64,9 +64,9 @@ io.on("connection", async (socket) => {
 
   // Join the Socket.IO Channel (For broadcasting)
   socket.join(roomId);
-  
+
   // Register User in Game Logic
-  roomManager.joinRoom(roomId, socket.id, user.username, user.avatarId);
+  roomManager.joinRoom(roomId, socket.id, user.id, user.username, user.avatarId);
 
 
   // --- 3. EVENT LISTENERS ---
@@ -78,6 +78,26 @@ io.on("connection", async (socket) => {
     socket.to(roomId).emit("draw-line", data.data);
   });
 
+  // NEW: Shape Event (Persist & Relay)
+  socket.on("draw-shape", async (data) => {
+    // data: { shape, roomId }
+    // 1. Relay to others
+    socket.to(roomId).emit("draw-shape", data);
+
+    // 2. Persist to DB (Async, don't block)
+    try {
+      await prisma.shape.create({
+        data: {
+          roomId: roomId,
+          type: data.shape.type,
+          data: data.shape // Store the full shape object as JSON
+        }
+      });
+    } catch (e) {
+      console.error("Failed to save shape:", e);
+    }
+  });
+
   // B. Chat / Guess Event
   socket.on("send-message", (data) => {
     roomManager.handleChat(roomId, socket.id, data.message);
@@ -86,6 +106,16 @@ io.on("connection", async (socket) => {
   // C. Clear Canvas Event
   socket.on("clear-canvas", () => {
     roomManager.handleClearCanvas(roomId, socket.id);
+  });
+
+  // User wants to start game
+  socket.on("start-game", () => {
+    roomManager.handleStartGame(roomId, socket.id);
+  });
+
+  // Drawer selected a word
+  socket.on("word-selected", ({ word }: { word: string }) => {
+    roomManager.handleWordSelection(roomId, socket.id, word);
   });
 
   // D. Disconnect

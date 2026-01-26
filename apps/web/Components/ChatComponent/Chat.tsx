@@ -11,6 +11,7 @@ interface Message {
 
 interface ChatProps {
     messages: Message[];
+    onSendMessage: (message: string) => void;
 }
 
 const styles = {
@@ -103,8 +104,15 @@ const styles = {
     },
 };
 
-export const Chat = ({ messages }: ChatProps) => {
+export const Chat = ({ messages, onSendMessage }: ChatProps) => {
     const bottomRef = React.useRef<HTMLDivElement>(null);
+    const [inputValue, setInputValue] = React.useState("");
+
+    const handleSend = () => {
+        if (!inputValue.trim()) return;
+        onSendMessage(inputValue);
+        setInputValue("");
+    };
 
     React.useEffect(() => {
         bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -150,8 +158,13 @@ export const Chat = ({ messages }: ChatProps) => {
                     type="text"
                     placeholder="Type a message..."
                     style={styles.input}
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    onKeyDown={(e) => {
+                        if (e.key === "Enter") handleSend();
+                    }}
                 />
-                <button style={styles.sendButton}>
+                <button style={styles.sendButton} onClick={handleSend}>
                     <Send size={18} color="white" />
                 </button>
             </div>

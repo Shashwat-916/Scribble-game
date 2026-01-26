@@ -4,9 +4,9 @@ import { Game } from "./game.js";
 export class RoomManager {
     // Map: RoomID -> Game Instance
     private rooms: Map<string, Game> = new Map();
-    
+
     // Quick Lookup: SocketID -> RoomID (To handle disconnects fast)
-    private userRoomMapping: Map<string, string> = new Map(); 
+    private userRoomMapping: Map<string, string> = new Map();
 
     private io: Server;
 
@@ -15,18 +15,18 @@ export class RoomManager {
     }
 
     // 1. Join Room
-    public joinRoom(roomId: string, socketId: string, name: string, avatarId: number) {
+    public joinRoom(roomId: string, socketId: string, userId: string, name: string, avatarId: number) {
         // Create Game instance if it doesn't exist
         let game = this.rooms.get(roomId);
         if (!game) {
             game = new Game(this.io, roomId);
             this.rooms.set(roomId, game);
-            game.startGame(); // Auto-start game logic when room is created
+            // game.startGame(); // Removed auto-start, now Admin controlled
         }
 
         // Add player to the game logic
-        game.addPlayer(socketId, name, avatarId);
-        
+        game.addPlayer(socketId, userId, name, avatarId);
+
         // Map user to this room for quick lookup later
         this.userRoomMapping.set(socketId, roomId);
     }
@@ -46,7 +46,23 @@ export class RoomManager {
             game.handleClearCanvas(socketId);
         }
     }
-    
+
+    // 4. Start Game (Admin only)
+    public handleStartGame(roomId: string, socketId: string) {
+        const game = this.rooms.get(roomId);
+        if (game) {
+            game.startGame();
+        }
+    }
+
+    // 5. Handle Word Selection
+    public handleWordSelection(roomId: string, socketId: string, word: string) {
+        const game = this.rooms.get(roomId);
+        if (game) {
+            game.handleWordSelection(socketId, word);
+        }
+    }
+
     // 4. Handle Disconnects
     public onDisconnect(socketId: string) {
         // Find which room this user was in
@@ -57,7 +73,7 @@ export class RoomManager {
         if (game) {
             // Remove player from Game Logic
             game.removePlayer(socketId);
-            
+
             // Garbage Collection: If room is empty, delete the game to save RAM
             if (game.players.length === 0) {
                 this.rooms.delete(roomId);

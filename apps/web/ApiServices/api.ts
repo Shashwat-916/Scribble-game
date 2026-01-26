@@ -63,3 +63,12 @@ export async function getRoomId(slug: string) {
     handleAxiosError(error, "Failed to get room");
   }
 }
+export async function getExistingShapes(roomId: string) {
+  try {
+    const res = await getRoom(roomId);
+    return res?.shapes?.map((s: any) => s.data) || [];
+  } catch (e) {
+    console.error(e);
+    return [];
+  }
+}

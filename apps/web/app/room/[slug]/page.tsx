@@ -40,6 +40,13 @@ export default function RoomPageUI() {
     const [players, setPlayers] = useState<Player[]>([]);
     const [messages, setMessages] = useState<Message[]>([]);
 
+    // Refs for socket listeners to access latest state
+    const playersRef = React.useRef<Player[]>([]);
+
+    useEffect(() => {
+        playersRef.current = players;
+    }, [players]);
+
     // WS Hook
     const socket = useSocket(slug);
 
@@ -74,23 +81,40 @@ export default function RoomPageUI() {
 
         // User Joined -> Update Leaderboard
         socket.on("user-joined", (updatedPlayers: any[]) => {
-            const mapped = updatedPlayers.map(p => ({
-                id: p.id,
-                username: p.name,
-                name: p.name,
-                avatarId: p.avatarId,
-                score: p.score
-            }));
-            setPlayers(mapped);
+            setPlayers(prev => {
+                const newPlayers = updatedPlayers.map(p => ({
+                    id: p.userId, // Map backend 'userId' to frontend 'id' for consistency with HTTP fetch
+                    username: p.name,
+                    name: p.name,
+                    avatarId: p.avatarId,
+                    score: p.score
+                }));
 
-            // Optional: System Chat Toast?
-            // toast(`${mapped[mapped.length-1].name} joined!`);
+                // Safe Merge: Key by 'id' (which is now userId for both HTTP and WS sources)
+                const playerMap = new Map(prev.map(p => [p.id, p]));
+
+                newPlayers.forEach(p => playerMap.set(p.id, p));
+
+                return Array.from(playerMap.values());
+            });
+        });
+
+        // Notification Listener
+        socket.on("notification", ({ type, message }: { type: string, message: string }) => {
+            if (type === "success") {
+                toast.success(message);
+            } else if (type === "error") {
+                toast.error(message);
+            } else {
+                toast(message);
+            }
         });
 
         // User Left -> Update Leaderboard
         socket.on("user-left", (updatedPlayers: any[]) => {
+            // Updated players list with userId mapped to id
             const mapped = updatedPlayers.map(p => ({
-                id: p.id,
+                id: p.userId,
                 username: p.name,
                 name: p.name,
                 avatarId: p.avatarId,
@@ -101,12 +125,15 @@ export default function RoomPageUI() {
 
         // Chat Message -> Update Chat & Handle System Messages
         socket.on("chat-message", (msg: any) => {
-            // msg: { name, message }
+            // Find avatar from current player list using Ref
+            const player = playersRef.current.find(p => p.name === msg.name);
+            const avatarId = player ? player.avatarId : (msg.name === 'System' ? 0 : 99);
+
             setMessages(prev => [...prev, {
                 id: Date.now().toString(),
                 name: msg.name,
                 message: msg.message,
-                avatarId: msg.name === 'System' ? 0 : 99 // Placeholder if avatar not sent in chat
+                avatarId
             }]);
         });
 
@@ -114,8 +141,15 @@ export default function RoomPageUI() {
             socket.off("user-joined");
             socket.off("user-left");
             socket.off("chat-message");
+            socket.off("notification");
         };
     }, [socket]);
+
+    const sendMessage = (message: string) => {
+        if (socket) {
+            socket.emit("send-message", { message });
+        }
+    };
 
     return (
         <div className="game-container">
@@ -130,7 +164,7 @@ export default function RoomPageUI() {
                 </div>
 
                 <div style={{ flex: 1 }}>
-                    <Draw isDrawer={false} />
+                    <Draw isDrawer={true} roomId={slug} socket={socket} />
                 </div>
             </div>
 
@@ -146,7 +180,7 @@ export default function RoomPageUI() {
                 {/* CHAT */}
                 <div className="chat-panel" style={styles.glass}>
                     <div style={{ height: "100%", width: "100%", display: "flex", flexDirection: "column" }}>
-                        <Chat messages={messages} />
+                        <Chat messages={messages} onSendMessage={sendMessage} />
                     </div>
                 </div>
             </div>
