@@ -16,7 +16,7 @@ export default function GlassLobby() {
     avatarId, setAvatarId,
     name, setName,
     roomIdInput, setRoomIdInput,
-    isLoading, createdRoomSlug, countdown, isCopied,
+    isLoading, createdRoomSlug, countdown, isCopied,               
     handleSubmit, copyToClipboard, skipCountdown
   } = useLobbyLogic();
 

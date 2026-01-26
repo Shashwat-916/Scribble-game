@@ -17,29 +17,47 @@ app.use(cors({
 const generateSlug = () => {
     return Math.floor(100000 + Math.random() * 900000).toString();
 };
-
 // =================================================================
 // 1. CREATE ROOM
 // =================================================================
 app.post("/room", async (req, res) => {
     const { username, avatarId } = req.body;
 
+    // ------------------------------
+    // VALIDATIONS
+    // ------------------------------
     if (!username) {
-        res.status(400).json({ message: "Username is required" });
-        return;
+        return res.status(400).json({ message: "Username is required" });
+    }
+
+    if (username.length < 3 || username.length > 20) {
+        return res
+            .status(400)
+            .json({ message: "Username must be between 3 and 20 characters" });
+    }
+
+    // avatarId optional but if present should be valid number
+    const parsedAvatarId = Number(avatarId);
+    if (avatarId && isNaN(parsedAvatarId)) {
+        return res.status(400).json({ message: "Invalid avatarId" });
     }
 
     try {
-        // Step 1: Create User
+        // ------------------------------
+        // STEP 1: CREATE USER
+        // ------------------------------
         const user = await prisma.user.create({
             data: {
                 username,
-                avatarId: Number(avatarId) || 1
+                avatarId: parsedAvatarId || 1 // default avatar
             }
         });
 
-        // Step 2: Create Room
+        // ------------------------------
+        // STEP 2: CREATE ROOM
+        // ------------------------------
         const slug = generateSlug();
+
         const room = await prisma.room.create({
             data: {
                 slug,
@@ -48,31 +66,45 @@ app.post("/room", async (req, res) => {
             }
         });
 
-        // Step 3: Link User to Room
+        // ------------------------------
+        // STEP 3: LINK USER TO ROOM
+        // ------------------------------
         await prisma.user.update({
             where: { id: user.id },
             data: { roomId: room.id }
         });
 
-        // Step 4: Generate Token
-        const token = jwt.sign({ userId: user.id }, JWT_SECRET || "secret");
+        // ------------------------------
+        // STEP 4: GENERATE TOKEN
+        // ------------------------------
+        const token = jwt.sign(
+            { userId: user.id },
+            JWT_SECRET || "secret",
+            { expiresIn: "7d" }
+        );
 
-        res.status(201).json({
-            message: "Room created",
+        // ------------------------------
+        // RESPONSE
+        // ------------------------------
+        return res.status(201).json({
+            message: "Room created successfully",
             token,
             roomId: room.id,
-            slug: room.slug
+            slug: room.slug,
+            user: {
+                id: user.id,
+                username: user.username,
+                avatarId: user.avatarId
+            }
         });
 
     } catch (e) {
         console.error("Error creating room:", e);
-        res.status(500).json({ message: "Internal Server Error" });
+        return res.status(500).json({ message: "Internal Server Error" });
     }
 });
 
-// =================================================================
-// 2. JOIN ROOM
-// =================================================================
+
 app.post("/join", async (req, res) => {
     const { username, avatarId, slug } = req.body;
 
@@ -117,20 +149,26 @@ app.post("/join", async (req, res) => {
     }
 });
 
-// =================================================================
-// 3. GET ROOM INFO
-// =================================================================
+
 app.get("/room/:slug", async (req, res) => {
     const { slug } = req.params;
 
     try {
         const room = await prisma.room.findUnique({
             where: { slug },
-            select: { id: true, status: true, slug: true }
+            include: {
+                users: {
+                    select: {
+                        id: true,
+                        username: true,
+                        avatarId: true
+                    }
+                }
+            }
         });
 
         if (!room) {
-            res.status(404).json({ message: "Room not found" });
+            res.status(404).json({ message: "Invalid Room ID" });
             return;
         }
 
@@ -142,8 +180,6 @@ app.get("/room/:slug", async (req, res) => {
     }
 });
 
-// --- Start Server ---
-const PORT = HTTP_PORT || 3001;
-app.listen(PORT, () => {
-    console.log(`HTTP Server running on PORT: ${PORT}`);
+app.listen(HTTP_PORT || 3001, () => {
+    console.log(`Server running on port ${HTTP_PORT || 3001}`);
 });

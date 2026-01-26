@@ -43,6 +43,9 @@ model Room {
   createdAt DateTime @default(now())
   status    RoomStatus @default(WAITING)
 
+
+ 
+
   // --- Game State (Persisted) ---
   currentWord     String?  // The word being guessed
   currentDrawerId String?  // ID of the user drawing right now

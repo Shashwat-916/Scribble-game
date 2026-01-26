@@ -11,8 +11,8 @@ export interface Player {
 
 // Words Collection
 const WORDS = [
-    "Apple", "Banana", "Car", "Dog", "Elephant", "Fish", "Guitar", "House", 
-    "Ice Cream", "Jellyfish", "Kite", "Lion", "Moon", "Nest", "Orange", 
+    "Apple", "Banana", "Car", "Dog", "Elephant", "Fish", "Guitar", "House",
+    "Ice Cream", "Jellyfish", "Kite", "Lion", "Moon", "Nest", "Orange",
     "Pencil", "Queen", "Robot", "Snake", "Tree", "Umbrella", "Van", "Watch"
 ];
 
@@ -22,15 +22,15 @@ const ROUND_DURATION = 80;
 export class Game {
     public roomId: string;
     public players: Player[];
-    
+
     private io: Server;
     private currentDrawerIndex: number = 0; // Turn tracker
     private currentWord: string = "";
-    
+
     // Timer Variables
     private timeLeft: number = ROUND_DURATION;
     private timer: NodeJS.Timeout | null = null;
-    
+
     // State Flags
     private isGameStarted: boolean = false;
     private roundActive: boolean = false;
@@ -44,7 +44,7 @@ export class Game {
     // ==================================================
     // 1. PLAYER MANAGEMENT (JOIN / LEAVE)
     // ==================================================
-    
+
     addPlayer(socketId: string, name: string, avatarId: number) {
         // Duplicate check
         const existingPlayer = this.players.find(p => p.id === socketId);
@@ -57,7 +57,12 @@ export class Game {
             score: 0,
             isDrawer: false
         };
+        this.players.push(player);
         this.io.to(this.roomId).emit("user-joined", this.players);
+        this.io.to(this.roomId).emit("chat-message", {
+            name: "System",
+            message: `${name} joined the game!`
+        });
 
         // 👇 ADD THIS BLOCK: Auto-Start when 2nd player joins
         if (this.players.length === 2 && !this.isGameStarted) {
@@ -73,9 +78,13 @@ export class Game {
 
         // 2. Remove from list
         this.players = this.players.filter(p => p.id !== socketId);
-        
+
         // 3. Notify others
         this.io.to(this.roomId).emit("user-left", this.players);
+        this.io.to(this.roomId).emit("chat-message", {
+            name: "System",
+            message: `${playerToRemove.name} left the game.`
+        });
 
         // --- CRITICAL: DRAWER LEFT LOGIC ---
         // Agar Jane wala banda Drawer tha aur round chal raha tha
@@ -99,7 +108,7 @@ export class Game {
 
     public startGame() {
         if (this.isGameStarted || this.players.length < 2) return;
-        
+
         this.isGameStarted = true;
         this.currentDrawerIndex = -1; // -1 set kiya taaki first turn 0 ho
         this.startNextTurn();
@@ -114,7 +123,7 @@ export class Game {
         // B. Pick Next Drawer (Circular Queue)
         // Logic: 0 -> 1 -> 2 -> 0 -> 1 ...
         this.currentDrawerIndex = (this.currentDrawerIndex + 1) % this.players.length;
-        
+
         const drawer = this.players[this.currentDrawerIndex];
 
         // --- GUARD CLAUSE (TypeScript Safety) ---
@@ -132,9 +141,9 @@ export class Game {
 
         // D. Notify Clients
         // 1. Drawer ko word batao
-        this.io.to(drawer.id).emit("your-turn", { 
+        this.io.to(drawer.id).emit("your-turn", {
             word: this.currentWord,
-            duration: ROUND_DURATION 
+            duration: ROUND_DURATION
         });
 
         // 2. Baaki sabko batao
@@ -147,7 +156,7 @@ export class Game {
 
         // E. Start Timer
         this.timeLeft = ROUND_DURATION;
-        
+
         this.timer = setInterval(() => {
             this.timeLeft--;
 
@@ -196,8 +205,8 @@ export class Game {
 
         // Case 1: Game chalu nahi hai -> Normal Chat
         if (!this.roundActive) {
-             this.io.to(this.roomId).emit("chat-message", { name: player.name, message });
-             return;
+            this.io.to(this.roomId).emit("chat-message", { name: player.name, message });
+            return;
         }
 
         // Case 2: Drawer cheating kar raha hai -> Normal Chat
@@ -211,7 +220,7 @@ export class Game {
             // 🎉 CORRECT GUESS!
             const timeBonus = Math.ceil((this.timeLeft / ROUND_DURATION) * 20);
             const points = 10 + timeBonus;
-            
+
             player.score += points;
 
             const drawer = this.players[this.currentDrawerIndex];
@@ -220,9 +229,9 @@ export class Game {
             }
 
             this.broadcastLeaderboard();
-            this.io.to(this.roomId).emit("user-guessed", { 
-                name: player.name, 
-                score: player.score 
+            this.io.to(this.roomId).emit("user-guessed", {
+                name: player.name,
+                score: player.score
             });
 
             this.endRound(`${player.name} guessed the word!`);
@@ -235,7 +244,7 @@ export class Game {
     // --- NEW: Handle Clear Canvas (Securely) ---
     public handleClearCanvas(socketId: string) {
         const player = this.players.find(p => p.id === socketId);
-        
+
         // Validation: Sirf Drawer hi clear kar sakta hai aur round active hona chahiye
         if (player && player.isDrawer && this.roundActive) {
             this.io.to(this.roomId).emit("clear-canvas");
