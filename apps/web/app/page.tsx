@@ -16,10 +16,10 @@ export default function GlassLobby() {
   const [activeTab, setActiveTab] = useState<'create' | 'join'>('create');
   const [avatarId, setAvatarId] = useState(1);
   const [name, setName] = useState("");
-  const [roomId, setRoomId] = useState(""); // Input for Joining
+  const [roomIdInput, setRoomIdInput] = useState(""); // User input for Room ID/Slug
   const [isLoading, setIsLoading] = useState(false);
 
-  // --- NEW STATE FOR COUNTDOWN FLOW ---
+  // --- COUNTDOWN STATE ---
   const [createdRoomSlug, setCreatedRoomSlug] = useState<string | null>(null);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [isCopied, setIsCopied] = useState(false);
@@ -27,61 +27,74 @@ export default function GlassLobby() {
   // --- COUNTDOWN EFFECT ---
   useEffect(() => {
     if (countdown === null) return;
-
     if (countdown > 0) {
       const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
       return () => clearTimeout(timer);
     } else {
-      // Countdown finished -> Enter Room
-      router.push(`/room/${createdRoomSlug}`);
+      // Time's up -> Go to room
+      if (createdRoomSlug) {
+        router.push(`/room/${createdRoomSlug}`);
+      }
     }
   }, [countdown, createdRoomSlug, router]);
 
-  // --- HANDLERS ---
+  // --- MAIN HANDLER ---
   const handleSubmit = async () => {
+    // 1. Validation
     if (!name.trim()) {
       toast.error("Please enter a nickname!");
+      return;
+    }
+
+    if (activeTab === 'join' && !roomIdInput.trim()) {
+      toast.error("Please enter a Room ID!");
       return;
     }
 
     setIsLoading(true);
 
     try {
-      let data;
-      
       if (activeTab === 'create') {
-        // --- CREATE FLOW ---
-        data = await createRoom(name, avatarId);
-        
-        // 1. Store Token
-        localStorage.setItem("token", data.token);
-        
-        // 2. PAUSE & SHOW INFO (Don't redirect yet)
-        setCreatedRoomSlug(data.slug);
-        setIsLoading(false); // Stop loading spinner so we can show countdown
-        setCountdown(10); // Start 10s timer
+        // ==========================
+        // CREATE FLOW
+        // ==========================
+        const data = await createRoom(name, avatarId);
 
-        // 3. Show Instructions Toast
+        // A. Store Token
+        if (data?.token) {
+          localStorage.setItem("token", data.token);
+        }
+
+        // B. Start Countdown Flow
+        setCreatedRoomSlug(data.slug);
+        setIsLoading(false); // Stop loading so UI shows link
+        setCountdown(10);    // Start 10s timer
+
         toast((t) => (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span><b>Room Created!</b><br/>Please copy the invite link. <br/>Entering in 10s...</span>
-            </div>
-        ), { duration: 6000, icon: '📋' });
+          <div className="flex items-center gap-2">
+            <span><b>Room Created!</b><br />Copy link below. Entering in 10s...</span>
+          </div>
+        ), { duration: 6000, icon: '🎉' });
 
       } else {
-        // --- JOIN FLOW (Standard) ---
-        if (!roomId.trim()) {
-          toast.error("Please enter a Room ID!");
-          setIsLoading(false);
-          return;
+        // ==========================
+        // JOIN FLOW
+        // ==========================
+        // We pass 'roomIdInput' as the 'slug' argument
+        const data = await joinRoom(name, avatarId, roomIdInput);
+
+        // A. Store Token
+        if (data?.token) {
+          localStorage.setItem("token", data.token);
         }
-        data = await joinRoom(name, avatarId, roomId);
-        localStorage.setItem("token", data.token);
-        toast.success("Joined room!");
+
+        // B. Immediate Redirect
+        toast.success("Joined successfully!");
         router.push(`/room/${data.slug}`);
       }
 
     } catch (err: any) {
+      // Error is already processed in api.ts, so err.message is clean
       toast.error(err.message || "Something went wrong");
       setIsLoading(false);
     }
@@ -89,21 +102,20 @@ export default function GlassLobby() {
 
   const copyToClipboard = () => {
     if (!createdRoomSlug) return;
-    const link = `${window.location.origin}/room/${createdRoomSlug}`;
+    const link =`${createdRoomSlug}` 
     navigator.clipboard.writeText(link);
     setIsCopied(true);
-    toast.success("Link copied to clipboard!");
+    toast.success("Link copied!");
     setTimeout(() => setIsCopied(false), 2000);
   };
 
-  // Helper to skip countdown manually
   const skipCountdown = () => {
-      if(createdRoomSlug) router.push(`/room/${createdRoomSlug}`);
+    if (createdRoomSlug) router.push(`/room/${createdRoomSlug}`);
   }
 
-  const selectedAvatar = AVATARS.find(a => a.id === avatarId);
+  const selectedAvatar = AVATARS.find((a: any) => a.id === avatarId);
 
-  // Styles helpers...
+  // Helper styles for tabs
   const tabStyles = {
     container: {
       display: "flex", backgroundColor: "rgba(255,255,255,0.05)", padding: "4px",
@@ -133,14 +145,14 @@ export default function GlassLobby() {
                   <Sparkles size={28} fill="#fff" /> Scribble
                 </h1>
                 <p style={styles.subtitle}>
-                  {activeTab === 'create' 
-                    ? "Create a room and invite friends!" 
+                  {activeTab === 'create'
+                    ? "Create a room and invite friends!"
                     : "Enter a Room ID to join the fun!"}
                 </p>
               </div>
 
-              {/* TAB SWITCHER (Disabled during countdown) */}
-              <div style={{...tabStyles.container, opacity: countdown !== null ? 0.5 : 1, pointerEvents: countdown !== null ? 'none' : 'auto'}}>
+              {/* TAB SWITCHER */}
+              <div style={{ ...tabStyles.container, opacity: countdown !== null ? 0.5 : 1, pointerEvents: countdown !== null ? 'none' : 'auto' }}>
                 <button onClick={() => setActiveTab('create')} style={tabStyles.button(activeTab === 'create')}>
                   <Plus size={16} /> Create
                 </button>
@@ -156,35 +168,35 @@ export default function GlassLobby() {
                 <div style={styles.inputGroup}>
                   <User size={18} style={styles.inputIcon} />
                   <input
-                    type="text" placeholder="e.g. ShadowHunter" style={styles.input}
+                    type="text" placeholder="e.g. Zoro" style={styles.input}
                     value={name} onChange={(e) => setName(e.target.value)}
                     disabled={isLoading || countdown !== null}
                   />
                 </div>
               </div>
 
-              {/* DYNAMIC SECTION */}
+              {/* DYNAMIC SECTION (Link vs Room ID Input) */}
               {activeTab === 'create' ? (
                 <div>
                   <label style={styles.label}>
-                     {createdRoomSlug ? "Your Room Invite Link" : "Invite Link Preview"}
+                    {createdRoomSlug ? "Invite Link Ready" : "Invite Link Preview"}
                   </label>
                   <div style={{
-                      ...styles.linkBox,
-                      borderColor: createdRoomSlug ? "#4ade80" : "rgba(255,255,255,0.05)", // Green border if ready
-                      backgroundColor: createdRoomSlug ? "rgba(74, 222, 128, 0.1)" : "rgba(255,255,255,0.05)"
+                    ...styles.linkBox,
+                    borderColor: createdRoomSlug ? "#4ade80" : "rgba(255,255,255,0.05)",
+                    backgroundColor: createdRoomSlug ? "rgba(74, 222, 128, 0.1)" : "rgba(255,255,255,0.05)"
                   }}>
-                    <span style={{...styles.linkText, color: createdRoomSlug ? "#fff" : "#94a3b8"}}>
-                       {createdRoomSlug 
-                         ? `${typeof window !== 'undefined' ? window.location.host : ''}/room/${createdRoomSlug}`
-                         : "scribble.io/room/..."}
+                    <span style={{ ...styles.linkText, color: createdRoomSlug ? "#fff" : "#94a3b8" }}>
+                      {createdRoomSlug
+                        ? `${typeof window !== 'undefined' ? "" : ''}${createdRoomSlug}`
+                        : "room..."}
                     </span>
-                    <button 
-                        style={styles.copyBtn} 
-                        disabled={!createdRoomSlug} 
-                        onClick={copyToClipboard}
+                    <button
+                      style={styles.copyBtn}
+                      disabled={!createdRoomSlug}
+                      onClick={copyToClipboard}
                     >
-                        {isCopied ? <Check size={16} color="#4ade80"/> : <Copy size={16} />}
+                      {isCopied ? <Check size={16} color="#4ade80" /> : <Copy size={16} />}
                     </button>
                   </div>
                 </div>
@@ -194,9 +206,9 @@ export default function GlassLobby() {
                   <div style={styles.inputGroup}>
                     <Hash size={18} style={styles.inputIcon} />
                     <input
-                      type="text" placeholder="e.g. cool-tiger-123"
-                      style={{...styles.input, borderColor: "#a855f7"}}
-                      value={roomId} onChange={(e) => setRoomId(e.target.value)}
+                      type="text" placeholder="e.g. 123456"
+                      style={{ ...styles.input, borderColor: "#a855f7" }}
+                      value={roomIdInput} onChange={(e) => setRoomIdInput(e.target.value)}
                       disabled={isLoading}
                     />
                   </div>
@@ -211,32 +223,30 @@ export default function GlassLobby() {
                   ...styles.mainButton,
                   opacity: isLoading ? 0.7 : 1,
                   cursor: isLoading ? "not-allowed" : "pointer",
-                  background: activeTab === 'create' 
-                    ? "linear-gradient(135deg, #6366f1, #a855f7)" 
+                  background: activeTab === 'create'
+                    ? "linear-gradient(135deg, #6366f1, #a855f7)"
                     : "linear-gradient(135deg, #ec4899, #8b5cf6)"
                 }}
               >
                 {isLoading ? (
                   <span>Wait...</span>
                 ) : countdown !== null ? (
-                   // COUNTDOWN STATE UI
-                   <span>Enter Room Now ({countdown}s)</span> 
+                  <span>Enter Room Now ({countdown}s)</span>
                 ) : (
-                   // NORMAL STATE UI
                   <>
-                    {activeTab === 'create' ? <Plus size={20} /> : <LogIn size={20} />} 
-                    {activeTab === 'create' ? "Create Room" : "Enter Room"}
+                    {activeTab === 'create' ? <Plus size={20} /> : <LogIn size={20} />}
+                    {activeTab === 'create' ? "Create Room" : "Join Game"}
                   </>
                 )}
               </button>
 
             </div>
 
-            {/* RIGHT SECTION */}
+            {/* RIGHT SECTION (Preview) */}
             <div className="right-section" style={styles.rightSection}>
               <div style={styles.illustration}>
                 <div style={styles.floatingBadge}>
-                   {activeTab === 'create' ? 'New' : 'Joining'}
+                  {activeTab === 'create' ? 'Host' : 'Guest'}
                 </div>
 
                 <div style={{ textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center" }}>
@@ -253,15 +263,15 @@ export default function GlassLobby() {
                     {name || "Player"}
                   </div>
                   <div style={{ fontSize: "0.8rem", color: "#94a3b8" }}>
-                    {countdown !== null ? "Creating Lobby..." : activeTab === 'create' ? "Ready to Host" : "Ready to Join"}
+                    {countdown !== null ? "Launching..." : activeTab === 'create' ? "Creating Lobby" : "Joining Lobby"}
                   </div>
                 </div>
 
-                {/* Decorative Circle */}
+                {/* Decorative Blob */}
                 <div style={{
                   position: "absolute", bottom: "-20px", left: "-20px",
                   width: "80px", height: "80px", borderRadius: "50%",
-                  background: activeTab === 'create' 
+                  background: activeTab === 'create'
                     ? "linear-gradient(45deg, #ec4899, #8b5cf6)"
                     : "linear-gradient(45deg, #3b82f6, #10b981)",
                   filter: "blur(40px)", zIndex: -1

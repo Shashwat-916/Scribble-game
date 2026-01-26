@@ -1,0 +1,6 @@
+ApiServices/api.ts(2,30): error TS2307: Cannot find module '../config' or its corresponding type declarations.
+app/page.tsx(7,39): error TS2307: Cannot find module '../../Styles/app.style' or its corresponding type declarations.
+app/page.tsx(8,25): error TS2307: Cannot find module '../../Constants/avatar' or its corresponding type declarations.
+app/page.tsx(9,24): error TS2307: Cannot find module '../Avatar/AvatarSelector' or its corresponding type declarations.
+app/page.tsx(10,38): error TS2307: Cannot find module '../../ApiServices/api' or its corresponding type declarations.
+app/page.tsx(116,39): error TS7006: Parameter 'a' implicitly has an 'any' type.

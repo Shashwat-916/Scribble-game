@@ -1,159 +1,74 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import toast from "react-hot-toast";
-import { useParams, useRouter } from "next/navigation";
-
-// Adjust imports to match your file structure
-import { Chat } from "../../../Components/ChatComponent/Canvas";
+import React from "react";
+import { Chat } from "../../../Components/ChatComponent/Chat";
 import { Draw } from "../../../Components/DrawComponent/Canvas";
 import { Score } from "../../../Components/Score/Score";
+import { styles, responsiveRoomCSS } from "./romStyle";
 
 
-// 1. Define reusable "Glass" styles to keep code clean
-const glassStyle = {
-    background: "rgba(255, 255, 255, 0.05)", // bg-white/5
-    backdropFilter: "blur(12px)",            // backdrop-blur-md
-    WebkitBackdropFilter: "blur(12px)",      // Safari support
-    border: "1px solid rgba(255, 255, 255, 0.2)", // border-white/20
-    borderRadius: "24px",                    // rounded-3xl
-    overflow: "hidden",
-    position: "relative" as const, // Fix for TypeScript type
-    boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)" // shadow-2xl
-};
 
-const labelStyle = {
-    position: "absolute" as const,
-    top: "8px",
-    left: "16px",
-    fontSize: "12px",
-    fontWeight: "bold",
-    textTransform: "uppercase" as const,
-    letterSpacing: "0.1em",
-    zIndex: 10,
-    pointerEvents: "none" as const,
-};
 
-export default function RoomPage() {
-    const params = useParams();
-    const router = useRouter();
-    
-    const slug = typeof params?.slug === 'string' ? params.slug : params?.slug?.[0] || '';
-    const [isAuthorized, setIsAuthorized] = useState(false);
-    
-    // 2. State for Responsive Layout (Mobile vs Desktop)
-    const [isMobile, setIsMobile] = useState(false);
+const mockPlayers = [
+    { id: "1", name: "Zoro", score: 120, avatarId: 1 },
+    { id: "2", name: "Luffy", score: 95, avatarId: 2 },
+    { id: "3", name: "Nami", score: 80, avatarId: 3 },
+    { id: "4", name: "Sanji", score: 70, avatarId: 4 },
+    { id: "5", name: "Usopp", score: 65, avatarId: 5 },
+    { id: "6", name: "Robin", score: 110, avatarId: 6 },
+    { id: "7", name: "Chopper", score: 50, avatarId: 7 },
+    { id: "8", name: "Franky", score: 85, avatarId: 8 },
+];
 
-    useEffect(() => {
-        // Auth Logic
-        const token = localStorage.getItem("token");
-        if (!token) {
-            toast.error("No access token found! Redirecting to lobby.");
-            router.push("/"); 
-            return;
-        }
-        setIsAuthorized(true);
-        console.log("Joining room:", slug, "with token:", token);
+const mockMessages = [
+    { name: "Zoro", message: "Is it a sword?", avatarId: 1 },
+    { name: "Luffy", message: "Looks tasty 😄", avatarId: 2 },
+    { name: "Nami", message: "No way, it’s not food", avatarId: 3 },
+    { name: "Sanji", message: "Anything beautiful? 👀", avatarId: 4 },
+    { name: "Usopp", message: "I’ve seen this before!", avatarId: 5 },
+    { name: "Robin", message: "Interesting shape...", avatarId: 6 },
+    { name: "Chopper", message: "Is it scary? 😨", avatarId: 7 },
+    { name: "Franky", message: "SUUUPER cool drawing!", avatarId: 8 },
+    { name: "Brook", message: "Yohohoho! A skull?", avatarId: 9 },
+    { name: "Zoro", message: "Nah, that’s not it.", avatarId: 1 },
+    { name: "Luffy", message: "I still think it’s food 😂", avatarId: 2 },
+    { name: "Nami", message: "Stop guessing food, Luffy!", avatarId: 3 },
+];
 
-        // Responsive Logic: Check window width
-        const handleResize = () => {
-            setIsMobile(window.innerWidth < 768); // 768px is the standard 'md' breakpoint
-        };
-        
-        // Check initially and add listener
-        handleResize();
-        window.addEventListener('resize', handleResize);
 
-        return () => {
-            // socket.disconnect();
-            window.removeEventListener('resize', handleResize);
-        };
-    }, [slug, router]);
-
-    if (!isAuthorized) {
-        return (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'white' }}>
-                Loading room environment...
-            </div>
-        );
-    }
-
+export default function RoomPageUI() {
     return (
-        // MAIN CONTAINER
-        <div 
-            style={{
-                display: "flex",
-                // Mobile = Column, Desktop = Row
-                flexDirection: isMobile ? "column" : "row", 
-                height: "100%",
-                width: "100%",
-                gap: "16px", // gap-4
-            }}
-        >
-            
-            {/* --- 1. DRAWING AREA (70%) --- */}
-            <div 
-                style={{
-                    ...glassStyle,
-                    // Mobile = Height 70%, Desktop = Width 70%
-                    width: isMobile ? "100%" : "60%",
-                    height: isMobile ? "60%" : "100%",
-                }}
-            >
-                <div style={{ ...labelStyle, color: "rgba(255, 255, 255, 0.4)" }}>Canvas</div>
-                <Draw  />
-            </div>
+        <div className="game-container">
+            <style>{responsiveRoomCSS}</style>
 
-            {/* --- 2. SIDEBAR (30%) --- */}
-            <div 
-                style={{
-                    display: "flex",
-                    // Mobile = Row (side-by-side), Desktop = Column (stacked)
-                    flexDirection: isMobile ? "row" : "column", 
-                    width: isMobile ? "100%" : "40%",
-                    height: isMobile ? "40%" : "100%",
-                    gap: "16px",
-                }}
-            >
-                
-                {/* A. SCOREBOARD */}
-                <div 
-                    style={{
-                        ...glassStyle,
-                        background: "rgba(99, 102, 241, 0.1)", // Indigo tint
-                        // Mobile = Width 40%, Desktop = Height 30%
-                        width: isMobile ? "40%" : "100%",
-                        height: isMobile ? "100%" : "30%",
-                        display: "flex",
-                        flexDirection: "column"
-                    }}
-                >
-                     <div style={{ ...labelStyle, position: "relative", top: 0, left: 0, padding: "8px", width: "100%", textAlign: "center", background: "rgba(255,255,255,0.1)", color: "#c7d2fe" }}>
-                        Leaderboard
-                     </div>
-                     <div style={{ flex: 1, overflow: "auto" }}>
-                        <Score  />
-                     </div>
+            {/* DRAW AREA */}
+            <div className="draw-area" style={styles.glass}>
+                <div style={styles.headerBar}>
+                    <div style={styles.infoText}>Time: 45s</div>
+                    <div style={styles.wordDisplay}>_ _ _ _ _</div>
+                    <div style={styles.infoText}>.... is drawing</div>
                 </div>
 
-                {/* B. CHAT */}
-                <div 
-                    style={{
-                        ...glassStyle,
-                        background: "rgba(16, 185, 129, 0.1)", // Emerald tint
-                        flex: 1, // Takes remaining space
-                        display: "flex",
-                        flexDirection: "column"
-                    }}
-                >
-                    <div style={{ ...labelStyle, position: "relative", top: 0, left: 0, padding: "8px", width: "100%", textAlign: "center", background: "rgba(255,255,255,0.1)", color: "#a7f3d0" }}>
-                        Chat
-                     </div>
-                    <div style={{ flex: 1, position: "relative" }}>
-                        <Chat  />
+                <div style={{ flex: 1 }}>
+                    <Draw isDrawer />
+                </div>
+            </div>
+
+            {/* SIDEBAR */}
+            <div className="sidebar-area">
+                {/* SCORE */}
+                <div className="score-panel" style={styles.glass}>
+                    <div style={{ height: "100%", width: "100%" }}>
+                        <Score players={mockPlayers} />
                     </div>
                 </div>
 
+                {/* CHAT */}
+                <div className="chat-panel" style={styles.glass}>
+                    <div style={{ height: "100%", width: "100%", display: "flex", flexDirection: "column" }}>
+                        <Chat messages={mockMessages} />
+                    </div>
+                </div>
             </div>
         </div>
     );

@@ -1,0 +1,1 @@
+Hooks/useGameLogic.ts(22,14): error TS2742: The inferred type of 'useGameLogic' cannot be named without a reference to '.pnpm/@socket.io+component-emitter@3.1.2/node_modules/@socket.io/component-emitter'. This is likely not portable. A type annotation is necessary.
