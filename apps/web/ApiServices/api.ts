@@ -54,15 +54,6 @@ export async function getRoom(slug: string) {
   }
 }
 
-export async function getRoomId(slug: string) {
-  try {
-    const response = await axios.get(`${HTTP_BACKEND}/room/${slug}`);
-    console.log(response.data);
-    return response.data;
-  } catch (error) {
-    handleAxiosError(error, "Failed to get room");
-  }
-}
 export async function getExistingShapes(roomId: string) {
   try {
     const res = await getRoom(roomId);
@@ -70,5 +61,22 @@ export async function getExistingShapes(roomId: string) {
   } catch (e) {
     console.error(e);
     return [];
+  }
+}
+export async function startGame(roomId: string) {
+  try {
+    const token = localStorage.getItem("token");
+    const response = await axios.post(
+      `${HTTP_BACKEND}/room/start`,
+      { roomId },
+      {
+        headers: {
+          Authorization: token,
+        },
+      }
+    );
+    return response.data;
+  } catch (error) {
+    handleAxiosError(error, "Failed to start game");
   }
 }

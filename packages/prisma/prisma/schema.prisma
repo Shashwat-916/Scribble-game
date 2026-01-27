@@ -6,10 +6,22 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+/**
+ * =========================
+ * ENUMS
+ * =========================
+ */
+
 enum RoomStatus {
   WAITING
   PLAYING
   FINISHED
+}
+
+enum GameStatus {
+  ACTIVE
+  COMPLETED
 }
 
 enum ShapeType {
@@ -19,74 +31,187 @@ enum ShapeType {
   pencil
 }
 
+enum ChatType {
+  MESSAGE
+  SYSTEM
+  CORRECT
+  CLOSE
+}
+
+/**
+ * =========================
+ * USER
+ * =========================
+ */
+
 model User {
   id        String   @id @default(uuid())
-  username  String
+  username  String   @unique
   avatarId  Int
-  score     Int      @default(0)
   createdAt DateTime @default(now())
 
-  // 1. User belongs to a Room (Member)
-  roomId    String?
-  room      Room?    @relation("RoomMembers", fields: [roomId], references: [id])
-
-  // 2. User sends many Chats
-  chats     Chat[]
-
-  // 3. User might be an Admin of many rooms (Optional but good for history)
-  roomsManaged Room[] @relation("RoomAdmin")
+  // Relations
+  roomsManaged Room[]       @relation("RoomAdmin")
+  roomPlayers  RoomPlayer[]
+  chats        Chat[]
+  guesses      Guess[]
+  turns        Turn[]
 }
+
+/**
+ * =========================
+ * ROOM (Lobby Container)
+ * =========================
+ */
 
 model Room {
-  id        String   @id @default(uuid())
-  slug      String   @unique
-  createdAt DateTime @default(now())
+  id        String     @id @default(uuid())
+  slug      String     @unique
   status    RoomStatus @default(WAITING)
+  createdAt DateTime   @default(now())
 
+  // Admin
+  adminId String
+  admin   User   @relation("RoomAdmin", fields: [adminId], references: [id])
 
- 
-
-  // --- Game State (Persisted) ---
-  currentWord     String?  // The word being guessed
-  currentDrawerId String?  // ID of the user drawing right now
-
-  // --- Relations ---
-  
-  // 1. The Admin (Strict Link)
-  // We use a named relation "RoomAdmin" to distinguish from normal members
-  adminId   String
-  admin     User     @relation("RoomAdmin", fields: [adminId], references: [id])
-
-  // 2. The Players
-  users     User[]   @relation("RoomMembers")
-
-  // 3. The Data
-  shapes    Shape[]
-  chats     Chat[]
+  // Relations
+  players RoomPlayer[]
+  games   Game[]
+  chats   Chat[]
 }
 
-model Chat {
-  // CHANGED: Int -> String (UUID)
-  id        String   @id @default(uuid()) 
-  message   String
+/**
+ * =========================
+ * ROOM PLAYER (Score lives here)
+ * =========================
+ */
+
+model RoomPlayer {
+  id         String   @id @default(uuid())
+  joinedAt   DateTime @default(now())
+  score      Int      @default(0)
+  hasGuessed Boolean  @default(false)
+
+  // Relations
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  roomId String
+  room   Room   @relation(fields: [roomId], references: [id])
+
+  @@unique([userId, roomId])
+}
+
+/**
+ * =========================
+ * GAME (One session per room)
+ * =========================
+ */
+
+model Game {
+  id        String     @id @default(uuid())
+  status    GameStatus @default(ACTIVE)
+  rounds    Int
+  roundTime Int // milliseconds
+  language  String
+  createdAt DateTime   @default(now())
+
+  // Relations
+  roomId String
+  room   Room   @relation(fields: [roomId], references: [id])
+
+  roundsData Round[]
+}
+
+/**
+ * =========================
+ * ROUND
+ * =========================
+ */
+
+model Round {
+  id        String   @id @default(uuid())
+  index     Int
   createdAt DateTime @default(now())
 
-  // Relation: Which Room?
-  roomId    String
-  room      Room     @relation(fields: [roomId], references: [id])
+  // Relations
+  gameId String
+  game   Game   @relation(fields: [gameId], references: [id])
 
-  // Relation: Who spoke?
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
+  turns Turn[]
 }
+
+/**
+ * =========================
+ * TURN (One player draws)
+ * =========================
+ */
+
+model Turn {
+  id        String    @id @default(uuid())
+  word      String
+  startedAt DateTime
+  endedAt   DateTime?
+
+  // Drawer
+  drawerId String
+  drawer   User   @relation(fields: [drawerId], references: [id])
+
+  // Relations
+  roundId String
+  round   Round  @relation(fields: [roundId], references: [id])
+
+  shapes  Shape[]
+  guesses Guess[]
+}
+
+/**
+ * =========================
+ * DRAWING DATA
+ * =========================
+ */
 
 model Shape {
-  // CHANGED: Int -> String (UUID)
-  id        String   @id @default(uuid()) 
-
-  roomId    String
-  room      Room     @relation(fields: [roomId], references: [id])
-
+  id        String    @id @default(uuid())
   type      ShapeType
   data      Json
+  createdAt DateTime  @default(now())
+
+  // Relations
+  turnId String
+  turn   Turn   @relation(fields: [turnId], references: [id])
+}
+
+/**
+ * =========================
+ * CHAT & GUESSES
+ * =========================
+ */
+
+model Chat {
+  id        String   @id @default(uuid())
+  message   String
+  type      ChatType @default(MESSAGE)
+  createdAt DateTime @default(now())
+
+  // Relations
+  roomId String
+  room   Room   @relation(fields: [roomId], references: [id])
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+}
+
+model Guess {
+  id        String   @id @default(uuid())
+  message   String
+  isCorrect Boolean
+  createdAt DateTime @default(now())
+
+  // Relations
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  turnId String
+  turn   Turn   @relation(fields: [turnId], references: [id])
 }

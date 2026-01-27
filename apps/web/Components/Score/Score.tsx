@@ -15,30 +15,34 @@ interface ScoreProps {
 
 
 
-export const Score = ({ players }: ScoreProps) => {
+export const Score = () => {
   return (
     <div className="score-grid">
-      {players.map((player) => {
-        const avatar = AVATARS.find(a => a.id === player.avatarId);
+      {/* Static score card */}
+      <div className="score-card">
+        <div className="score-avatar">
+          <User size={16} color="rgba(255,255,255,0.5)" />
+        </div>
 
-        return (
-          <div key={player.id} className="score-card">
-            <div className="score-avatar">
-              {avatar ? (
-                <img src={avatar.src} alt={player.name} />
-              ) : (
-                <User size={16} color="rgba(255,255,255,0.5)" />
-              )}
-            </div>
+        <div className="score-info">
+          <div className="score-name">Player Name</div>
+        </div>
 
-            <div className="score-info">
-              <div className="score-name">{player.name}</div>
-            </div>
+        <div className="score-point">0</div>
+      </div>
 
-            <div className="score-point">{player.score}</div>
-          </div>
-        );
-      })}
+      {/* Duplicate for layout preview */}
+      <div className="score-card">
+        <div className="score-avatar">
+          <User size={16} color="rgba(255,255,255,0.5)" />
+        </div>
+
+        <div className="score-info">
+          <div className="score-name">Another Player</div>
+        </div>
+
+        <div className="score-point">0</div>
+      </div>
     </div>
   );
 };
