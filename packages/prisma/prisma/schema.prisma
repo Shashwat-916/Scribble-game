@@ -33,36 +33,25 @@ enum ShapeType {
 
 enum ChatType {
   MESSAGE
-  SYSTEM
   CORRECT
   CLOSE
 }
 
-/**
- * =========================
- * USER
- * =========================
- */
+enum Role {
+  user
+  admin
+}
 
 model User {
   id        String   @id @default(uuid())
   username  String   @unique
-  avatarId  Int
+  avatarId  String
   createdAt DateTime @default(now())
 
-  // Relations
-  roomsManaged Room[]       @relation("RoomAdmin")
-  roomPlayers  RoomPlayer[]
-  chats        Chat[]
-  guesses      Guess[]
-  turns        Turn[]
-}
+  role Role
 
-/**
- * =========================
- * ROOM (Lobby Container)
- * =========================
- */
+  rooms Room[]
+}
 
 model Room {
   id        String     @id @default(uuid())
@@ -70,148 +59,6 @@ model Room {
   status    RoomStatus @default(WAITING)
   createdAt DateTime   @default(now())
 
-  // Admin
   adminId String
-  admin   User   @relation("RoomAdmin", fields: [adminId], references: [id])
-
-  // Relations
-  players RoomPlayer[]
-  games   Game[]
-  chats   Chat[]
-}
-
-/**
- * =========================
- * ROOM PLAYER (Score lives here)
- * =========================
- */
-
-model RoomPlayer {
-  id         String   @id @default(uuid())
-  joinedAt   DateTime @default(now())
-  score      Int      @default(0)
-  hasGuessed Boolean  @default(false)
-
-  // Relations
-  userId String
-  user   User   @relation(fields: [userId], references: [id])
-
-  roomId String
-  room   Room   @relation(fields: [roomId], references: [id])
-
-  @@unique([userId, roomId])
-}
-
-/**
- * =========================
- * GAME (One session per room)
- * =========================
- */
-
-model Game {
-  id        String     @id @default(uuid())
-  status    GameStatus @default(ACTIVE)
-  rounds    Int
-  roundTime Int // milliseconds
-  language  String
-  createdAt DateTime   @default(now())
-
-  // Relations
-  roomId String
-  room   Room   @relation(fields: [roomId], references: [id])
-
-  roundsData Round[]
-}
-
-/**
- * =========================
- * ROUND
- * =========================
- */
-
-model Round {
-  id        String   @id @default(uuid())
-  index     Int
-  createdAt DateTime @default(now())
-
-  // Relations
-  gameId String
-  game   Game   @relation(fields: [gameId], references: [id])
-
-  turns Turn[]
-}
-
-/**
- * =========================
- * TURN (One player draws)
- * =========================
- */
-
-model Turn {
-  id        String    @id @default(uuid())
-  word      String
-  startedAt DateTime
-  endedAt   DateTime?
-
-  // Drawer
-  drawerId String
-  drawer   User   @relation(fields: [drawerId], references: [id])
-
-  // Relations
-  roundId String
-  round   Round  @relation(fields: [roundId], references: [id])
-
-  shapes  Shape[]
-  guesses Guess[]
-}
-
-/**
- * =========================
- * DRAWING DATA
- * =========================
- */
-
-model Shape {
-  id        String    @id @default(uuid())
-  type      ShapeType
-  data      Json
-  createdAt DateTime  @default(now())
-
-  // Relations
-  turnId String
-  turn   Turn   @relation(fields: [turnId], references: [id])
-}
-
-/**
- * =========================
- * CHAT & GUESSES
- * =========================
- */
-
-model Chat {
-  id        String   @id @default(uuid())
-  message   String
-  type      ChatType @default(MESSAGE)
-  createdAt DateTime @default(now())
-
-  // Relations
-  roomId String
-  room   Room   @relation(fields: [roomId], references: [id])
-
-  userId String
-  user   User   @relation(fields: [userId], references: [id])
-}
-
-model Guess {
-  id        String   @id @default(uuid())
-  message   String
-  isCorrect Boolean
-  createdAt DateTime @default(now())
-
-  // Relations
-  userId String
-  user   User   @relation(fields: [userId], references: [id])
-
-  turnId String
-  turn   Turn   @relation(fields: [turnId], references: [id])
+  admin   User   @relation(fields: [adminId], references: [id])
 }

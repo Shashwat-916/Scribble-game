@@ -18,6 +18,7 @@ export const metadata: Metadata = {
 
 import { Toaster } from "react-hot-toast";
 
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -26,8 +27,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
-        {children}
-        <Toaster />
+       
+          {children}
+          <Toaster />
+       
       </body>
     </html>
   );

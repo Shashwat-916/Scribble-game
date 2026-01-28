@@ -2,19 +2,7 @@
 import React from "react";
 import { Send, User } from "lucide-react";
 import { AVATARS } from "../../Constants/avatar";
-import{ styles } from "./styles"
-
-interface Message {
-    name: string;
-    message: string;
-    avatarId?: number;
-}
-
-interface ChatProps {
-    messages: Message[];
-    onSendMessage: (message: string) => void;
-}
-
+import { styles } from "./styles";
 
 export const Chat = () => {
   return (
@@ -23,20 +11,28 @@ export const Chat = () => {
       <div style={styles.messageList} className="no-scrollbar">
         <div style={styles.emptyState}>Chat empty. Start guessing!</div>
 
-        {/* Example static message (remove if not needed) */}
+        {/* Example static message */}
         <div style={styles.messageRow}>
           <div style={styles.avatarContainer}>
-            <User size={16} color="rgba(255,255,255,0.5)" />
+            <User size={14} color="rgba(255,255,255,0.5)" />
           </div>
 
-          <div style={styles.bubble}>
-            <span style={styles.senderName}>Player</span>
-            This is a static chat message.
+          <div style={{ ...styles.bubble, ...styles.otherBubble }}>
+            <span style={styles.senderName}>Username</span>
+            Hello there 👋
+          </div>
+        </div>
+
+        <div style={{ ...styles.messageRow, ...styles.ownMessageRow }}>
+          <div style={styles.avatarContainer} />
+
+          <div style={{ ...styles.bubble, ...styles.ownBubble }}>
+            Hi! 😊
           </div>
         </div>
       </div>
 
-      {/* Input (UI only) */}
+      {/* Input */}
       <div style={styles.inputArea}>
         <input
           type="text"
@@ -44,7 +40,7 @@ export const Chat = () => {
           style={styles.input}
           disabled
         />
-        <button style={styles.sendButton} disabled>
+        <button style={{ ...styles.sendButton, opacity: 0.6 }} disabled>
           <Send size={18} color="white" />
         </button>
       </div>

@@ -12,10 +12,15 @@ const envPath = path.resolve(__dirname, "../.env");
 console.log(`@repo/env: Loading .env from ${envPath}`);
 dotenv.config({ path: envPath });
 
-export const HTTP_PORT = process.env.HTTP_PORT 
-export const WS_PORT = process.env.WS_PORT 
-export const DATABASE_URL = process.env.DATABASE_URL  
-export const JWT_SECRET = process.env.JWT_SECRET
+export const HTTP_PORT = process.env.HTTP_PORT
+export const WS_PORT = process.env.WS_PORT
+export const DATABASE_URL = process.env.DATABASE_URL
+
+// Validate JWT_SECRET is defined
+if (!process.env.JWT_SECRET) {
+    throw new Error("JWT_SECRET environment variable is not defined. Please set it in your .env file.");
+}
+export const JWT_SECRET: string = process.env.JWT_SECRET;
 
 
 
