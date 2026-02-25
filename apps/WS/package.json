@@ -19,7 +19,6 @@
   },
   "devDependencies": {
     "@repo/env": "workspace:*",
-    "@repo/prisma": "workspace:*",
     "@repo/typescript-config": "workspace:*",
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",

@@ -1,5 +1,5 @@
 {
-  "name": "web",
+  "name": "client",
   "version": "0.1.0",
   "type": "module",
   "private": true,
@@ -12,7 +12,6 @@
   },
   "dependencies": {
     "@repo/env": "workspace:*",
-    "@repo/prisma": "workspace:*",
     "@repo/typescript-config": "workspace:*",
     "@repo/ui": "workspace:*",
     "axios": "^1.13.3",

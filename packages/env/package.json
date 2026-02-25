@@ -2,9 +2,9 @@
   "name": "@repo/env",
   "version": "1.0.0",
   "description": "",
-  "main": "/index.js",
+  "main": "./index.js",
   "exports": {
-    "./common": "./dist/index.js"
+    ".": "./dist/index.js"
   },
   "scripts": {
     "dev": "tsc -b && node dist/index.js"

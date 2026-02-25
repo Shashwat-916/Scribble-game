@@ -1,2 +1,1 @@
-export const HTTP_BACKEND = "http://localhost:3001";
-export const WS_BACKEND = "http://localhost:8080";
+export {  WS_PORT, JWT_SECRET } from "@repo/env";
